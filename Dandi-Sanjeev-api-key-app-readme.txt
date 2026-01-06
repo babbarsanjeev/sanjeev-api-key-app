@@ -1,0 +1,49 @@
+linkedin post
+Different types of prompt engineeting techniques
+COntext engineering
+Prompt vs contect engineering
+Cursor rules types
+ML vs AI vs GenAI
+The dummy mode ; leveraging copilot, llm to leverage while writing code
+ 
+moved from npm to yarn
+
+Cursor : Start Server - yarn dev
+
+
+Local Deployment : http://localhost:3000/dashboards
+(vercel) Cloud deployment : https://sanjeev-api-key-app.vercel.app/
+
+
+CURL API checks for API verification
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ curl.exe -X POST http://localhost:3000/api/validate -H "Content-Type: application/json" -d "{\"key\": \"dandi-yh1YtDZboF8U2gqaHtZP8uiL\"}"
+ curl.exe -X POST http://localhost:3000/api/validate -H "Content-Type: application/json" -d '{"key": "dandi-Aw9DcrFS49Afa8Pv055II4VQ"}'
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+  
+Sanjeev API KEY APP on GITHUB
+babbarsanjeev  user
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ Github repository :   https://github.com/babbarsanjeev/sanjeev-api-key-app
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+Vercel 
+https://sanjeev-api-key-app.vercel.app/
+
+
+Supabase : postgres DB
+
+Researcher : Used https://github.com/assafelovic/gpt-researcher  -- Multi agent search engine
+https://github.com/langchain-ai/langchain
+
+Thunder Client - for rest API testing in Cursor
+
+
+cd "/c/Users/babbars/Desktop/Cursor AI Tutorial/cursor-course/dandi"
+git init
+git add .
+git commit -m "Initial commit - Sanjeev API Key App"
+git remote add origin https://github.com/babbarsanjeev/sanjeev-api-key-app.git
+git branch -M main
+git push -u origin main
