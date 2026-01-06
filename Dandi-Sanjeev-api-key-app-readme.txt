@@ -16,6 +16,14 @@ POST	/api/validate	Validate an API key
 POST	/api/github-summarizer	Summarize GitHub repo
  
  
+https://sanjeev-api-key-app.vercel.app/api/keys
+https://sanjeev-api-key-app.vercel.app/api/keys/{id}
+https://sanjeev-api-key-app.vercel.app/api/validate
+https://sanjeev-api-key-app.vercel.app/api/github-summarizer
+
+https://sanjeev-api-key-app.vercel.app/dashboards
+
+ 
 moved from npm to yarn
 
 Cursor : Start Server - yarn dev
@@ -55,6 +63,8 @@ POST : https://sanjeev-api-key-app.vercel.app/api/validate
 key : <take from supabase>
 
 POST : http://localhost:3000/api/github-summarizer
+
+Vercel : https://sanjeev-api-key-app.vercel.app/api/github-summarizer
 {"repo_url": "https://github.com/assafelovic/gpt-researcher"}
 OR
 {"repo_url": "https://github.com/langchain-ai/langchain"}
