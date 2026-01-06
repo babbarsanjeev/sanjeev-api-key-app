@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 // Generate a random API key
 function generateApiKey() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let key = 'sk-';
+  let key = 'dandi-';
   for (let i = 0; i < 24; i++) {
     key += chars.charAt(Math.floor(Math.random() * chars.length));
   }

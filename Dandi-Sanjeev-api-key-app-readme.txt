@@ -6,6 +6,16 @@ Cursor rules types
 ML vs AI vs GenAI
 The dummy mode ; leveraging copilot, llm to leverage while writing code
  
+Your API Endpoints:
+Method	Endpoint	Purpose
+GET	/api/keys	List all API keys
+POST	/api/keys	Create new API key
+PUT	/api/keys/[id]	Update an API key
+DELETE	/api/keys/[id]	Delete an API key
+POST	/api/validate	Validate an API key
+POST	/api/github-summarizer	Summarize GitHub repo
+ 
+ 
 moved from npm to yarn
 
 Cursor : Start Server - yarn dev
@@ -13,6 +23,7 @@ Cursor : Start Server - yarn dev
 
 Local Deployment : http://localhost:3000/dashboards
 (vercel) Cloud deployment : https://sanjeev-api-key-app.vercel.app/
+							
 
 
 CURL API checks for API verification
@@ -38,6 +49,17 @@ Researcher : Used https://github.com/assafelovic/gpt-researcher  -- Multi agent 
 https://github.com/langchain-ai/langchain
 
 Thunder Client - for rest API testing in Cursor
+Hoppscoth for API testing
+
+POST : https://sanjeev-api-key-app.vercel.app/api/validate
+key : <take from supabase>
+
+POST : http://localhost:3000/api/github-summarizer
+{"repo_url": "https://github.com/assafelovic/gpt-researcher"}
+OR
+{"repo_url": "https://github.com/langchain-ai/langchain"}
+
+
 
 
 cd "/c/Users/babbars/Desktop/Cursor AI Tutorial/cursor-course/dandi"
