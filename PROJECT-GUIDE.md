@@ -14,12 +14,14 @@
 5. [Environment Variables](#environment-variables)
 6. [API Endpoints](#api-endpoints)
 7. [LangChain & OpenAI Integration](#langchain--openai-integration)
-8. [Testing with Hoppscotch](#testing-with-hoppscotch)
-9. [GitHub Setup](#github-setup)
-10. [Vercel Deployment](#vercel-deployment)
-11. [Complete Flow Diagram](#complete-flow-diagram)
-12. [File Structure](#file-structure)
-13. [Quick Reference Commands](#quick-reference-commands)
+8. [Google SSO Authentication](#google-sso-authentication)
+9. [Route Protection (Middleware)](#route-protection-middleware)
+10. [Testing with Hoppscotch](#testing-with-hoppscotch)
+11. [GitHub Setup](#github-setup)
+12. [Vercel Deployment](#vercel-deployment)
+13. [Complete Flow Diagram](#complete-flow-diagram)
+14. [File Structure](#file-structure)
+15. [Quick Reference Commands](#quick-reference-commands)
 
 ---
 
@@ -47,6 +49,7 @@
 | **Supabase** | Database (PostgreSQL) | 2.47.10 |
 | **LangChain** | AI Framework | 1.2.4 |
 | **OpenAI** | AI Model (GPT-4o) | via LangChain |
+| **NextAuth.js** | Authentication (Google SSO) | 4.24.13 |
 | **Zod** | Schema Validation | 4.3.5 |
 | **Yarn** | Package Manager | 1.22.22 |
 | **Vercel** | Hosting | - |
@@ -148,16 +151,36 @@ export default supabase;
 
 ## 🔐 Environment Variables
 
-### File: `.env.local`
+### File: `.env.local` (Local Development)
 
 ```env
-# Supabase
+# Database (Supabase)
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
 # OpenAI
 OPENAI_API_KEY=sk-proj-your-openai-key-here
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-your-secret-here
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-random-secret-here
 ```
+
+### Vercel Environment Variables
+
+| Variable | Local Value | Production Value |
+|----------|-------------|------------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Same | Same |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same | Same |
+| `OPENAI_API_KEY` | Same | Same |
+| `GOOGLE_CLIENT_ID` | Same | Same |
+| `GOOGLE_CLIENT_SECRET` | Same | Same |
+| `NEXTAUTH_URL` | `http://localhost:3000` | `https://your-app.vercel.app` |
+| `NEXTAUTH_SECRET` | Same | Same |
 
 ### Getting API Keys:
 
@@ -347,6 +370,243 @@ export async function summarizeGithubReadme(readmeContent) {
 
 ---
 
+## 🔐 Google SSO Authentication
+
+### Overview
+We use **NextAuth.js** with Google Provider for authentication. Users can sign in with their Google account, and their details are stored in Supabase.
+
+### Step 1: Install NextAuth
+```bash
+yarn add next-auth
+```
+
+### Step 2: Create Google OAuth Credentials
+1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. Create a new project or select existing
+3. Click **Create Credentials** → **OAuth client ID**
+4. Application type: **Web application**
+5. Add **Authorized JavaScript origins**:
+   - `http://localhost:3000`
+   - `https://your-app.vercel.app`
+6. Add **Authorized redirect URIs**:
+   - `http://localhost:3000/api/auth/callback/google`
+   - `https://your-app.vercel.app/api/auth/callback/google`
+7. Copy **Client ID** and **Client Secret**
+
+### Step 3: Create NextAuth API Route
+File: `app/api/auth/[...nextauth]/route.js`
+
+```javascript
+import NextAuth from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import { supabase } from "@/lib/supabaseClient";
+
+const handler = NextAuth({
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+  ],
+  callbacks: {
+    async signIn({ user, account, profile }) {
+      // Save user to Supabase on first login
+      if (account?.provider === "google") {
+        const { data: existingUser } = await supabase
+          .from("users")
+          .select("id")
+          .eq("google_id", profile.sub)
+          .single();
+
+        if (!existingUser) {
+          await supabase.from("users").insert({
+            google_id: profile.sub,
+            email: user.email,
+            name: user.name,
+            image: user.image,
+          });
+        } else {
+          await supabase
+            .from("users")
+            .update({ last_login: new Date().toISOString() })
+            .eq("google_id", profile.sub);
+        }
+      }
+      return true;
+    },
+    async session({ session, token }) {
+      session.user.id = token.sub;
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+});
+
+export { handler as GET, handler as POST };
+```
+
+### Step 4: Create AuthProvider Component
+File: `app/components/AuthProvider.js`
+
+```javascript
+"use client";
+
+import { SessionProvider } from "next-auth/react";
+
+export default function AuthProvider({ children }) {
+  return <SessionProvider>{children}</SessionProvider>;
+}
+```
+
+### Step 5: Wrap App with AuthProvider
+File: `app/layout.js`
+
+```javascript
+import AuthProvider from "./components/AuthProvider";
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### Step 6: Create SignInButton Component
+File: `app/components/SignInButton.js`
+
+```javascript
+"use client";
+
+import { useSession, signIn, signOut } from "next-auth/react";
+import Image from "next/image";
+
+export default function SignInButton() {
+  const { data: session, status } = useSession();
+
+  if (status === "loading") {
+    return <div>Loading...</div>;
+  }
+
+  if (session) {
+    return (
+      <div className="flex items-center gap-4">
+        {session.user?.image && (
+          <Image
+            src={session.user.image}
+            alt="Profile"
+            width={32}
+            height={32}
+            className="rounded-full"
+          />
+        )}
+        <span>{session.user?.name}</span>
+        <button onClick={() => signOut()}>Sign Out</button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => signIn("google")}>
+      Sign in with Google
+    </button>
+  );
+}
+```
+
+### Step 7: Create Users Table in Supabase
+
+```sql
+CREATE TABLE IF NOT EXISTS users (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  google_id TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  image TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_login TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public insert" ON users FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public select" ON users FOR SELECT USING (true);
+CREATE POLICY "Allow public update" ON users FOR UPDATE USING (true);
+```
+
+### Step 8: Configure next.config.ts for Google Images
+
+```typescript
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
+    ],
+  },
+};
+
+export default nextConfig;
+```
+
+---
+
+## 🛡 Route Protection (Middleware)
+
+### Overview
+Protect routes so only authenticated users can access them.
+
+### File: `middleware.ts`
+
+```typescript
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
+
+export async function middleware(request: NextRequest) {
+  const secret = process.env.NEXTAUTH_SECRET;
+  
+  if (!secret) {
+    console.warn("NEXTAUTH_SECRET not available");
+    return NextResponse.next();
+  }
+
+  try {
+    const token = await getToken({ req: request, secret });
+
+    if (!token) {
+      const url = new URL("/", request.url);
+      url.searchParams.set("callbackUrl", request.url);
+      return NextResponse.redirect(url);
+    }
+
+    return NextResponse.next();
+  } catch (error) {
+    console.error("Middleware error:", error);
+    return NextResponse.next();
+  }
+}
+
+// Protect these routes
+export const config = {
+  matcher: ["/dashboards/:path*"],
+};
+```
+
+### What It Does:
+- Checks if user has valid session token
+- Redirects to home page if not authenticated
+- Protects `/dashboards` and all sub-routes
+
+---
+
 ## 🧪 Testing with Hoppscotch
 
 ### What is Hoppscotch?
@@ -423,8 +683,17 @@ In Vercel Dashboard → Settings → Environment Variables:
 | `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase Anon Key |
 | `OPENAI_API_KEY` | Your OpenAI API Key |
+| `GOOGLE_CLIENT_ID` | Your Google Client ID |
+| `GOOGLE_CLIENT_SECRET` | Your Google Client Secret |
+| `NEXTAUTH_URL` | `https://your-app.vercel.app` |
+| `NEXTAUTH_SECRET` | Your random secret |
 
-### Step 3: Deploy
+### Step 3: Configure Google OAuth for Production
+Add these in Google Cloud Console:
+- **JavaScript origin:** `https://your-app.vercel.app`
+- **Redirect URI:** `https://your-app.vercel.app/api/auth/callback/google`
+
+### Step 4: Deploy
 Click **Deploy** - Vercel builds and deploys automatically.
 
 ### Step 4: Auto-Deploy
@@ -498,31 +767,37 @@ localhost:3000              sanjeev-api-key-app.vercel.app
 dandi/
 ├── app/
 │   ├── api/
+│   │   ├── auth/
+│   │   │   └── [...nextauth]/
+│   │   │       └── route.js          # NextAuth API route
 │   │   ├── keys/
-│   │   │   ├── route.js              # 60 lines - GET/POST keys
+│   │   │   ├── route.js              # GET/POST keys
 │   │   │   └── [id]/
-│   │   │       └── route.js          # 74 lines - PUT/DELETE key
+│   │   │       └── route.js          # PUT/DELETE key
 │   │   ├── validate/
-│   │   │   └── route.js              # 54 lines - Validate key
+│   │   │   └── route.js              # Validate key
 │   │   └── github-summarizer/
-│   │       └── route.js              # 165 lines - AI summarizer
+│   │       └── route.js              # AI summarizer
 │   ├── dashboards/
-│   │   └── page.js                   # Dashboard UI
+│   │   └── page.js                   # Dashboard UI (Protected)
 │   ├── components/
+│   │   ├── AuthProvider.js           # SessionProvider wrapper
+│   │   ├── SignInButton.js           # Google sign-in button
 │   │   ├── Sidebar.js                # Navigation sidebar
 │   │   └── Notification.js           # Toast notifications
 │   ├── playground/
 │   │   └── page.js                   # API testing page
-│   ├── layout.js                     # App layout
-│   └── page.js                       # Home page
+│   ├── layout.js                     # App layout with AuthProvider
+│   └── page.js                       # Home page with sign-in
 ├── lib/
 │   ├── supabaseClient.js             # Database client
 │   └── chain.js                      # LangChain + OpenAI
+├── middleware.ts                     # Route protection
 ├── .env.local                        # Environment variables
 ├── package.json                      # Dependencies
 ├── yarn.lock                         # Lock file
-├── tailwind.config.js                # Tailwind config
-└── next.config.js                    # Next.js config
+├── next.config.ts                    # Next.js config (with Google images)
+└── PROJECT-GUIDE.md                  # This file!
 ```
 
 ---
@@ -569,17 +844,33 @@ cd "C:\path\to\project"
 
 ## 🎯 Checklist for New Projects
 
+### Basic Setup
 - [ ] Create Next.js project
-- [ ] Set up Supabase database
+- [ ] Set up Supabase database (api_keys table)
 - [ ] Create `.env.local` with credentials
 - [ ] Install dependencies (Supabase, LangChain, Zod)
 - [ ] Create API routes
 - [ ] Build dashboard UI
 - [ ] Test with Hoppscotch
+
+### Authentication (Google SSO)
+- [ ] Install next-auth
+- [ ] Create Google OAuth credentials in Google Cloud Console
+- [ ] Create `app/api/auth/[...nextauth]/route.js`
+- [ ] Create `AuthProvider` component
+- [ ] Create `SignInButton` component
+- [ ] Update `layout.js` with AuthProvider
+- [ ] Create `middleware.ts` for route protection
+- [ ] Create `users` table in Supabase
+- [ ] Update `next.config.ts` for Google images
+
+### Deployment
 - [ ] Initialize Git repository
 - [ ] Push to GitHub
 - [ ] Deploy to Vercel
-- [ ] Add environment variables to Vercel
+- [ ] Add ALL environment variables to Vercel
+- [ ] Configure Google OAuth for production URL
+- [ ] Test production authentication
 - [ ] Test production endpoints
 
 ---
@@ -595,6 +886,44 @@ cd "C:\path\to\project"
 
 ---
 
-*Last Updated: January 6, 2026*
+*Last Updated: January 7, 2026*
 *Created with ❤️ using Cursor AI*
+
+---
+
+## 🔑 Environment Variables Reference
+
+When deploying to Vercel, set these environment variables:
+
+| Variable | Where to Get It |
+|----------|-----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API |
+| `OPENAI_API_KEY` | OpenAI Platform → API Keys |
+| `GOOGLE_CLIENT_ID` | Google Cloud Console → Credentials |
+| `GOOGLE_CLIENT_SECRET` | Google Cloud Console → Credentials |
+| `NEXTAUTH_URL` | Your Vercel URL (e.g., `https://your-app.vercel.app`) |
+| `NEXTAUTH_SECRET` | Generate with: `openssl rand -base64 32` |
+
+**⚠️ Never commit real credentials to Git!**
+
+---
+
+## 🚨 Troubleshooting
+
+### Error: "OAuth client was not found"
+- Verify `GOOGLE_CLIENT_ID` in Vercel matches Google Cloud Console
+- Check for extra spaces or characters
+
+### Error: "redirect_uri_mismatch"
+- Add production redirect URI to Google Cloud Console:
+  `https://your-app.vercel.app/api/auth/callback/google`
+
+### Error: "NO_SECRET"
+- Add `NEXTAUTH_SECRET` to Vercel environment variables
+- Redeploy without cache
+
+### Error: "Server configuration error"
+- Verify all environment variables are set in Vercel
+- Redeploy with "Use existing Build Cache" UNCHECKED
 
