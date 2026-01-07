@@ -6,6 +6,15 @@ Cursor rules types
 ML vs AI vs GenAI
 The dummy mode ; leveraging copilot, llm to leverage while writing code
  
+
+--AC SETUP with Credit Card
+Google Studio
+OpenAI
+
+OAuth (Google SSO)
+Client ID : [REMOVED - See .env.local]
+Client Secret : [REMOVED - See .env.local]
+
 Your API Endpoints:
 Method	Endpoint	Purpose
 GET	/api/keys	List all API keys

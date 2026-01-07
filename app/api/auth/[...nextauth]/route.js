@@ -1,0 +1,30 @@
+import NextAuth from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+
+const handler = NextAuth({
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+  ],
+  // Using default NextAuth sign-in page
+  callbacks: {
+    async session({ session, token }) {
+      // Add user ID to session
+      session.user.id = token.sub;
+      return session;
+    },
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: false, // Disable debug mode in production
+});
+
+export { handler as GET, handler as POST };
+

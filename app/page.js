@@ -1,25 +1,24 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import SignInButton from "./components/SignInButton";
 
 export default function Home() {
+  const { data: session } = useSession();
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-100 dark:from-zinc-900 dark:to-black">
       <main className="flex flex-col items-center justify-center min-h-screen p-8">
-        {/* Header */}
+        {/* Header with Login Button */}
         <div className="w-full max-w-5xl flex items-center justify-between mb-16">
           <p className="font-mono text-sm bg-gray-100 dark:bg-zinc-800 px-4 py-2 rounded-lg border border-gray-200 dark:border-zinc-700">
-            Get started by editing <code className="font-bold">src/app/page.js</code>
+            Welcome to <code className="font-bold">Sanjeev API Key App</code>
           </p>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">By</span>
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              width={70}
-              height={16}
-              className="dark:invert"
-            />
-          </div>
+          
+          {/* Login/Logout Button */}
+          <SignInButton />
         </div>
 
         {/* Logo */}
@@ -33,6 +32,15 @@ export default function Home() {
             priority
           />
         </div>
+
+        {/* User Welcome Message */}
+        {session && (
+          <div className="mb-8 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <p className="text-green-800 dark:text-green-200">
+              ✅ Signed in as <strong>{session.user?.email}</strong>
+            </p>
+          </div>
+        )}
 
         {/* Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-5xl mb-8">
