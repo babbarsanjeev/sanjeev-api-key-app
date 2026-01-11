@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
@@ -80,6 +81,233 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
+const PlayIcon = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+    <polygon points="5 3 19 12 5 21 5 3"/>
+  </svg>
+);
+
+const LoadingSpinner = () => (
+  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+  </svg>
+);
+
+// API Demo Component
+function ApiDemoSection() {
+  const [repoUrl, setRepoUrl] = useState("https://github.com/assafelovic/gpt-researcher");
+  const [apiKey, setApiKey] = useState("");
+  const [response, setResponse] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [activeTab, setActiveTab] = useState("body");
+
+  const handleSendRequest = async () => {
+    if (!apiKey.trim()) {
+      setError("Please enter your API key in the Headers tab");
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+    setResponse(null);
+
+    try {
+      const res = await fetch("/api/github-summarizer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+        },
+        body: JSON.stringify({ repo_url: repoUrl }),
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        setError(data.error || `Error: ${res.status}`);
+      } else {
+        setResponse(data);
+      }
+    } catch (err) {
+      setError("Failed to connect to API. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <section id="demo" className="py-20 px-6 bg-white/50">
+      <div className="max-w-5xl mx-auto">
+        {/* Section Header */}
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+            Try the API{" "}
+            <span className="relative inline-block">
+              <span className="relative z-10">live</span>
+              <span className="absolute bottom-1 left-0 w-full h-2 bg-gradient-to-r from-[#ff6b6b]/30 to-[#ee5a5a]/30 -z-0"></span>
+            </span>
+          </h2>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Test the GitHub Summarizer API right here. Edit the payload, add your API key, and see AI-powered insights instantly.
+          </p>
+        </div>
+
+        {/* API Tester Card */}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden">
+          {/* Request Header */}
+          <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border-b border-gray-200">
+            <span className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded">POST</span>
+            <div className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 font-mono truncate">
+              <span className="text-gray-400">{`{your-domain}`}</span>/api/github-summarizer
+            </div>
+            <button
+              onClick={handleSendRequest}
+              disabled={isLoading}
+              className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#ff6b6b] to-[#ee5a5a] hover:from-[#ff5252] hover:to-[#e04848] disabled:from-gray-300 disabled:to-gray-300 text-white font-semibold rounded-lg transition-colors shadow-md"
+            >
+              {isLoading ? <LoadingSpinner /> : <PlayIcon />}
+              {isLoading ? "Sending..." : "Send"}
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab("body")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === "body"
+                  ? "text-[#ff6b6b] border-b-2 border-[#ff6b6b] bg-white"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Body <span className="text-[#ff6b6b]">•</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("headers")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === "headers"
+                  ? "text-[#ff6b6b] border-b-2 border-[#ff6b6b] bg-white"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Headers <span className="text-xs text-gray-400">1</span>
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="p-4">
+            {activeTab === "body" && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-500 font-medium">Raw Request Body</span>
+                  <span className="text-xs text-gray-400">application/json</span>
+                </div>
+                <div className="bg-[#1e1e1e] rounded-lg p-4 font-mono text-sm">
+                  <div className="flex">
+                    <span className="text-gray-500 mr-4 select-none">1</span>
+                    <div className="flex-1">
+                      <span className="text-gray-400">{"{"}</span>
+                      <span className="text-red-400">&quot;repo_url&quot;</span>
+                      <span className="text-gray-400">: </span>
+                      <input
+                        type="text"
+                        value={repoUrl}
+                        onChange={(e) => setRepoUrl(e.target.value)}
+                        className="bg-transparent text-green-400 outline-none border-b border-dashed border-gray-600 focus:border-[#ff6b6b] min-w-[300px]"
+                        placeholder="https://github.com/owner/repo"
+                      />
+                      <span className="text-gray-400">{"}"}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "headers" && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-500 font-medium">Request Headers</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      value="x-api-key"
+                      readOnly
+                      className="bg-gray-100 border border-gray-200 rounded px-3 py-2 text-sm font-mono text-gray-600 w-32"
+                    />
+                    <input
+                      type="text"
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder="Enter your API key (e.g., dandi-xxxx...)"
+                      className="flex-1 bg-white border border-gray-200 rounded px-3 py-2 text-sm font-mono focus:border-[#ff6b6b] focus:ring-1 focus:ring-[#ff6b6b] outline-none"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    💡 Don&apos;t have an API key? <Link href="/dashboards" className="text-[#ff6b6b] hover:underline font-medium">Create one in the Dashboard</Link>
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Response Section */}
+          {(response || error) && (
+            <div className="border-t border-gray-200">
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-50">
+                <span className="text-sm font-medium text-gray-700">Response</span>
+                {response && (
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                    200 OK
+                  </span>
+                )}
+                {error && (
+                  <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-medium rounded">
+                    Error
+                  </span>
+                )}
+              </div>
+              <div className="p-4 max-h-80 overflow-auto">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+                    {error}
+                  </div>
+                )}
+                {response && (
+                  <pre className="bg-[#1e1e1e] rounded-lg p-4 text-sm text-green-400 font-mono overflow-x-auto">
+                    {JSON.stringify(response, null, 2)}
+                  </pre>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-center gap-4 mt-8">
+          <Link
+            href="/dashboards"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#ff6b6b] to-[#ee5a5a] hover:from-[#ff5252] hover:to-[#e04848] text-white font-semibold rounded-full transition-all shadow-lg shadow-red-200"
+          >
+            <KeyIcon />
+            Get Your API Key
+          </Link>
+          <a
+            href="#features"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-full transition-colors border border-gray-300"
+          >
+            <BookIcon />
+            Documentation
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function Home() {
   const { data: session } = useSession();
 
@@ -88,121 +316,107 @@ export default function Home() {
       icon: <KeyIcon />,
       title: "API Key Management",
       description: "Create, manage, and track API keys with usage limits and analytics. Full CRUD operations with a beautiful dashboard.",
-      color: "text-yellow-600",
-      bg: "bg-yellow-100"
+      color: "text-[#ff6b6b]",
+      bg: "bg-red-50"
     },
     {
       icon: <ShieldIcon />,
       title: "Full-stack Auth",
       description: "Add login with Google SSO in minutes. Secure authentication with NextAuth.js and session management built-in.",
-      color: "text-yellow-600",
-      bg: "bg-yellow-100"
+      color: "text-[#ff6b6b]",
+      bg: "bg-red-50"
     },
     {
       icon: <CodeIcon />,
       title: "RPC (Client ↔ Server)",
       description: "Seamless API communication with automatic validation. Type-safe requests between your frontend and backend.",
-      color: "text-yellow-600",
-      bg: "bg-yellow-100"
+      color: "text-[#ff6b6b]",
+      bg: "bg-red-50"
     },
     {
       icon: <RocketIcon />,
       title: "Simple Deployment",
       description: "Deploy to Vercel with one click. Environment variables, serverless functions, and edge caching out of the box.",
-      color: "text-yellow-600",
-      bg: "bg-yellow-100"
+      color: "text-[#ff6b6b]",
+      bg: "bg-red-50"
     },
     {
       icon: <BrainIcon />,
       title: "AI-Powered",
       description: "LangChain + OpenAI integration for intelligent GitHub repository summaries. Get insights in seconds.",
-      color: "text-yellow-600",
-      bg: "bg-yellow-100"
+      color: "text-[#ff6b6b]",
+      bg: "bg-red-50"
     },
     {
       icon: <ZapIcon />,
       title: "And More!",
       description: "Usage tracking, rate limiting, playground for testing, beautiful UI components, and comprehensive documentation.",
-      color: "text-yellow-600",
-      bg: "bg-yellow-100"
+      color: "text-[#ff6b6b]",
+      bg: "bg-red-50"
     }
   ];
 
   return (
     <div className="min-h-screen bg-[#f5f0e6]">
       {/* Navigation */}
-      <nav className="w-full px-6 py-4 border-b border-[#e5dfd1]">
+      <nav className="w-full px-6 py-3 bg-white shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-[#f0c14b] flex items-center justify-center">
-              <span className="text-lg">🔑</span>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#ff6b6b] to-[#ee5a5a] flex items-center justify-center shadow-lg shadow-red-200">
+              <GitHubIcon className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">Sanjeev API KeyForge</span>
-            <span className="text-xs font-medium text-[#f0c14b] bg-[#fef9e7] px-2 py-0.5 rounded-full border border-[#f0c14b]/30">(beta)</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-[#ff6b6b] to-[#ee5a5a] bg-clip-text text-transparent">
+              Sanjeev Github Analyzer
+            </span>
           </div>
 
           {/* Nav Links */}
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Docs</a>
-            <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Blog</a>
-            <a href="#" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">FAQ</a>
-            <a href="#" className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors border border-gray-300 rounded-full px-3 py-1.5">
-              <span>👋</span> Join the list
-            </a>
-        </div>
+            <a href="#features" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Features</a>
+            <a href="#pricing" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Pricing</a>
+            <Link href="/dashboards" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Dashboard</Link>
+            <a href="#demo" className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">Docs</a>
+          </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-4">
-            <a href="https://github.com/babbarsanjeev/sanjeev-api-key-app" target="_blank" rel="noopener noreferrer" className="hidden md:flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors">
-              <StarIcon />
-              Star us on GitHub
-            </a>
+          <div className="flex items-center gap-3">
             {session ? (
-              <div className="flex items-center gap-3">
+              <>
+                {/* Go to Dashboard Button */}
+                <Link 
+                  href="/dashboards"
+                  className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-[#ff6b6b] to-[#ee5a5a] hover:from-[#ff5252] hover:to-[#e04848] text-white rounded-full transition-all shadow-md shadow-red-200"
+                >
+                  Go to Dashboard
+                </Link>
+                
                 {/* User Info */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-full border border-gray-200 shadow-sm">
+                <div className="flex items-center gap-2">
                   {session.user?.image ? (
-          <Image
+                    <Image
                       src={session.user.image} 
                       alt="Profile" 
-                      width={28}
-                      height={28}
-                      className="rounded-full object-cover ring-2 ring-[#f0c14b]/50"
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover ring-2 ring-gray-100"
                     />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-[#f0c14b] flex items-center justify-center text-gray-900 text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#ff6b6b] to-[#ee5a5a] flex items-center justify-center text-white text-xs font-bold">
                       {session.user?.name?.charAt(0) || session.user?.email?.charAt(0) || '?'}
                     </div>
                   )}
-                  <span className="text-sm font-medium text-gray-700 max-w-[120px] truncate">
+                  <span className="text-sm font-medium text-gray-700 hidden lg:block">
                     {session.user?.name || session.user?.email?.split('@')[0]}
                   </span>
-                  <span className="flex items-center gap-1 text-xs text-gray-400">
-                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                  </span>
                 </div>
-                {/* Dashboard Button */}
-                <Link 
-                  href="/dashboards"
-                  className="px-4 py-2 text-sm font-semibold bg-[#f0c14b] hover:bg-[#e5b645] text-gray-900 rounded-lg transition-colors"
-                >
-                  Dashboard
-                </Link>
-              </div>
+
+                {/* Sign Out Button */}
+                <SignInButton />
+              </>
             ) : (
               <SignInButton />
             )}
-            <div className="flex items-center gap-2">
-              <a href="https://github.com/babbarsanjeev/sanjeev-api-key-app" target="_blank" rel="noopener noreferrer" className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
-                <GitHubIcon className="w-5 h-5" />
-              </a>
-            </div>
           </div>
         </div>
       </nav>
@@ -217,7 +431,7 @@ export default function Home() {
                 Manage API keys{" "}
                 <span className="relative inline-block">
                   <span className="relative z-10">faster.</span>
-                  <span className="absolute bottom-2 left-0 w-full h-3 bg-[#f0c14b] -z-0"></span>
+                  <span className="absolute bottom-2 left-0 w-full h-3 bg-gradient-to-r from-[#ff6b6b]/30 to-[#ee5a5a]/30 -z-0"></span>
                 </span>
               </h1>
               
@@ -229,14 +443,14 @@ export default function Home() {
               <div className="flex flex-wrap items-center gap-4 mb-12">
                 <Link 
                   href="/dashboards"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#f0c14b] hover:bg-[#e5b645] text-gray-900 font-semibold rounded-lg transition-colors shadow-sm"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#ff6b6b] to-[#ee5a5a] hover:from-[#ff5252] hover:to-[#e04848] text-white font-semibold rounded-full transition-all shadow-lg shadow-red-200"
                 >
                   <TerminalIcon />
                   Get Started
                 </Link>
                 <a 
                   href="#features"
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-lg transition-colors border border-gray-300"
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-white hover:bg-gray-50 text-gray-700 font-semibold rounded-full transition-colors border border-gray-300"
                 >
                   <BookIcon />
                   Documentation
@@ -339,14 +553,14 @@ export default function Home() {
             {features.map((feature, index) => (
               <div 
                 key={index}
-                className="p-6 bg-white rounded-xl border border-gray-200 hover:border-[#f0c14b] hover:shadow-lg transition-all group"
+                className="p-6 bg-white rounded-xl border border-gray-200 hover:border-[#ff6b6b] hover:shadow-lg transition-all group"
               >
                 <div className={`w-12 h-12 ${feature.bg} rounded-xl flex items-center justify-center ${feature.color} mb-4 group-hover:scale-110 transition-transform`}>
                   {feature.icon}
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2">{feature.title}</h3>
                 <p className="text-gray-600 text-sm leading-relaxed mb-3">{feature.description}</p>
-                <a href="#" className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-[#e5b645] transition-colors">
+                <a href="#" className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-[#ff6b6b] transition-colors">
                   Learn more <ArrowRightIcon />
                 </a>
               </div>
@@ -354,6 +568,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* API Demo Section */}
+      <ApiDemoSection />
 
       {/* User welcome (if signed in) */}
       {session && (
@@ -371,17 +588,19 @@ export default function Home() {
       )}
 
       {/* Footer */}
-      <footer className="py-8 px-6 border-t border-[#e5dfd1]">
+      <footer className="py-8 px-6 bg-white border-t border-gray-100">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-[#f0c14b] flex items-center justify-center">
-              <span className="text-sm">🔑</span>
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#ff6b6b] to-[#ee5a5a] flex items-center justify-center">
+              <GitHubIcon className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-gray-900">Sanjeev API KeyForge</span>
+            <span className="font-bold bg-gradient-to-r from-[#ff6b6b] to-[#ee5a5a] bg-clip-text text-transparent">
+              Sanjeev Github Analyzer
+            </span>
           </div>
-          <p className="text-sm text-gray-500">© 2026 Sanjeev API KeyForge. Built with ❤️ by Sanjeev Babbar</p>
+          <p className="text-sm text-gray-500">© 2026 Sanjeev Github Analyzer. Built with ❤️ by Sanjeev Babbar</p>
           <div className="flex items-center gap-4">
-            <a href="https://github.com/babbarsanjeev/sanjeev-api-key-app" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-gray-700">
+            <a href="https://github.com/babbarsanjeev/sanjeev-api-key-app" target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-[#ff6b6b] transition-colors">
               <GitHubIcon className="w-5 h-5" />
             </a>
           </div>
